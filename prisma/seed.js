@@ -86,25 +86,7 @@ async function generateImpressions(adId, userId, count = 50) {
 }
 
 async function main() {
-  // Seed categories
-  const categories = [
-    { name: 'Cardiology', slug: 'cardiology' },
-    { name: 'Neurology', slug: 'neurology' },
-    { name: 'Oncology', slug: 'oncology' },
-    { name: 'Pediatrics', slug: 'pediatrics' },
-  ];
-  
-  const categoryMap = {};
-  for (const c of categories) {
-    const category = await prisma.category.upsert({ 
-      where: { slug: c.slug }, 
-      update: {}, 
-      create: c 
-    });
-    categoryMap[c.slug] = category;
-  }
-
-  // Seed companies
+  // Seed companies first
   const companies = [
     { name: 'Pfizer' },
     { name: 'Genentech' },
@@ -120,6 +102,37 @@ async function main() {
       create: c 
     });
     companyMap[c.name] = company;
+  }
+
+  // Seed categories with company assignments
+  // Each category is assigned to exactly one company
+  const categoryCompanyAssignments = [
+    { name: 'Cardiology', slug: 'cardiology', companyName: 'Pfizer' },
+    { name: 'Neurology', slug: 'neurology', companyName: 'Genentech' },
+    { name: 'Oncology', slug: 'oncology', companyName: 'GSK' },
+    { name: 'Pediatrics', slug: 'pediatrics', companyName: 'Eli Lilly' },
+  ];
+  
+  const categoryMap = {};
+  for (const c of categoryCompanyAssignments) {
+    const company = companyMap[c.companyName];
+    if (!company) {
+      console.log(`Company ${c.companyName} not found for category ${c.name}`);
+      continue;
+    }
+    
+    const category = await prisma.category.upsert({ 
+      where: { slug: c.slug }, 
+      update: { 
+        companyId: company.id 
+      }, 
+      create: {
+        name: c.name,
+        slug: c.slug,
+        companyId: company.id
+      }
+    });
+    categoryMap[c.slug] = category;
   }
 
   console.log('Seeded categories and companies.');
@@ -139,13 +152,13 @@ async function main() {
   
   console.log('Created test user:', testUser.email);
 
-    // Seed ads for each company and category combination
+    // Seed ads for each valid company-category pair (one category per company)
   console.log('Seeding ads and generating impressions...');
     const ads = [
-      // Pfizer ads
+      // Pfizer ad - only for Cardiology category
       {
         companyName: 'Pfizer',
-        categorySlug: 'cardiology',
+        categorySlug: 'cardiology', // This is the only valid category for Pfizer
         imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Pfizer+Cardiology',
         headline: 'Leading Heart Health Innovation',
         ctaText: 'Learn More',
@@ -155,183 +168,36 @@ async function main() {
         startDate: new Date(),
         endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)), // 3 months from now
       },
-      {
-        companyName: 'Pfizer',
-        categorySlug: 'neurology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Pfizer+Neurology',
-        headline: 'Advancing Neurological Research',
-        ctaText: 'Discover More',
-        ctaUrl: 'https://www.pfizer.com/science/therapeutic-areas/neuroscience',
-        budget: 8500.00,
-        spendCap: 950.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
-      },
-      {
-        companyName: 'Pfizer',
-        categorySlug: 'oncology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Pfizer+Oncology',
-        headline: 'Breakthrough Cancer Therapies',
-        ctaText: 'Learn More',
-        ctaUrl: 'https://www.pfizer.com/science/therapeutic-areas/oncology',
-        budget: 12000.00,
-        spendCap: 1200.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 4)),
-      },
-      {
-        companyName: 'Pfizer',
-        categorySlug: 'pediatrics',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Pfizer+Pediatrics',
-        headline: 'Protecting Children\'s Health',
-        ctaText: 'Discover Solutions',
-        ctaUrl: 'https://www.pfizer.com/science/therapeutic-areas/vaccines',
-        budget: 9000.00,
-        spendCap: 900.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-      },
-      
-      // Genentech ads
+      // Genentech ad - only for Neurology category
       {
         companyName: 'Genentech',
-        categorySlug: 'cardiology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Genentech+Cardiology',
-        headline: 'Innovative Cardiovascular Solutions',
-        ctaText: 'Explore Treatments',
-        ctaUrl: 'https://www.gene.com/medical-professionals/cardiovascular',
-        budget: 11000.00,
-        spendCap: 1100.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-      },
-      {
-        companyName: 'Genentech',
-        categorySlug: 'neurology',
+        categorySlug: 'neurology', // This is the only valid category for Genentech
         imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Genentech+Neurology',
         headline: 'Transforming Neurological Care',
-        ctaText: 'See Research',
+        ctaText: 'Discover More',
         ctaUrl: 'https://www.gene.com/medical-professionals/neuroscience',
         budget: 9500.00,
         spendCap: 950.00,
         startDate: new Date(),
         endDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
       },
-      {
-        companyName: 'Genentech',
-        categorySlug: 'oncology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Genentech+Oncology',
-        headline: 'Pioneering Cancer Treatments',
-        ctaText: 'Explore Research',
-        ctaUrl: 'https://www.gene.com/medical-professionals/oncology',
-        budget: 13000.00,
-        spendCap: 1300.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 4)),
-      },
-      {
-        companyName: 'Genentech',
-        categorySlug: 'pediatrics',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Genentech+Pediatrics',
-        headline: 'Advanced Pediatric Therapies',
-        ctaText: 'Learn More',
-        ctaUrl: 'https://www.gene.com/medical-professionals/pediatrics',
-        budget: 9800.00,
-        spendCap: 980.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-      },
-      
-      // GSK ads
+      // GSK ad - only for Oncology category
       {
         companyName: 'GSK',
-        categorySlug: 'cardiology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=GSK+Cardiology',
-        headline: 'Heart Health Solutions',
-        ctaText: 'Discover More',
-        ctaUrl: 'https://www.gsk.com/en-gb/products/our-medicines/',
-        budget: 9500.00,
-        spendCap: 950.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-      },
-      {
-        companyName: 'GSK',
-        categorySlug: 'neurology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=GSK+Neurology',
-        headline: 'Advancing Neurological Science',
-        ctaText: 'View Research',
-        ctaUrl: 'https://www.gsk.com/en-gb/research/therapeutic-areas/',
-        budget: 8200.00,
-        spendCap: 820.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
-      },
-      {
-        companyName: 'GSK',
-        categorySlug: 'oncology',
+        categorySlug: 'oncology', // This is the only valid category for GSK
         imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=GSK+Oncology',
         headline: 'Innovative Cancer Therapies',
         ctaText: 'Learn More',
-        ctaUrl: 'https://www.gsk.com/en-gb/research/therapeutic-areas/oncology/',
-        budget: 11500.00,
-        spendCap: 1150.00,
+        ctaUrl: 'https://www.gsk.com/en-gb/healthcare-professionals/oncology/',
+        budget: 11000.00,
+        spendCap: 1100.00,
         startDate: new Date(),
         endDate: new Date(new Date().setMonth(new Date().getMonth() + 4)),
       },
-      {
-        companyName: 'GSK',
-        categorySlug: 'pediatrics',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=GSK+Pediatrics',
-        headline: 'Supporting Child Health',
-        ctaText: 'View Solutions',
-        ctaUrl: 'https://www.gsk.com/en-gb/products/our-vaccines/',
-        budget: 8700.00,
-        spendCap: 870.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-      },
-      
-      // Eli Lilly ads
+      // Eli Lilly ad - only for Pediatrics category
       {
         companyName: 'Eli Lilly',
-        categorySlug: 'cardiology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Eli+Lilly+Cardiology',
-        headline: 'Cardiovascular Breakthroughs',
-        ctaText: 'Explore Solutions',
-        ctaUrl: 'https://www.lilly.com/disease-areas/cardiovascular',
-        budget: 10500.00,
-        spendCap: 1050.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-      },
-      {
-        companyName: 'Eli Lilly',
-        categorySlug: 'neurology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Eli+Lilly+Neurology',
-        headline: 'Neurological Disease Innovations',
-        ctaText: 'Discover Treatments',
-        ctaUrl: 'https://www.lilly.com/disease-areas/neuroscience',
-        budget: 9000.00,
-        spendCap: 900.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
-      },
-      {
-        companyName: 'Eli Lilly',
-        categorySlug: 'oncology',
-        imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Eli+Lilly+Oncology',
-        headline: 'Advancing Cancer Care',
-        ctaText: 'Learn More',
-        ctaUrl: 'https://www.lilly.com/disease-areas/oncology',
-        budget: 12500.00,
-        spendCap: 1250.00,
-        startDate: new Date(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 4)),
-      },
-      {
-        companyName: 'Eli Lilly',
-        categorySlug: 'pediatrics',
+        categorySlug: 'pediatrics', // This is the only valid category for Eli Lilly
         imageUrl: 'https://placehold.co/600x200/EEE/31343C.png?text=Eli+Lilly+Pediatrics',
         headline: 'Pediatric Health Solutions',
         ctaText: 'Find Out More',
@@ -344,62 +210,98 @@ async function main() {
     ];
   
   // Seed ads and generate impressions
-  for (const ad of ads) {
-    const company = companyMap[ad.companyName];
-    const category = categoryMap[ad.categorySlug];
+  for (const adData of ads) {
+    const company = companyMap[adData.companyName];
+    const category = categoryMap[adData.categorySlug];
     
     // Skip if category doesn't exist
     if (!category) continue;
     
-    // Create or update ad
-    const createdAd = await prisma.ad.upsert({
+    // Verify that this category belongs to this company (respecting one-to-one relationship)
+    if (category.companyId !== company.id) {
+      console.log(`Skipping ad: Category ${adData.categorySlug} does not belong to company ${adData.companyName}`);
+      continue;
+    }
+    
+    // Create or update the ad
+    // First check if an ad already exists for this company and category
+    const existingAd = await prisma.ad.findFirst({
       where: {
-        // Use a unique identifier for the ad, since we don't have a unique constraint on companyId + categoryId
-        // We'll use the combination of company name and category slug to find existing ads
-        id: (await prisma.ad.findFirst({
-          where: {
-            companyId: company.id,
-            categoryId: category.id,
-            headline: ad.headline
-          },
-          select: { id: true }
-        }))?.id || '00000000-0000-0000-0000-000000000000' // Fallback ID that won't match anything
-      },
-      update: {
-        imageUrl: ad.imageUrl,
-        headline: ad.headline,
-        ctaText: ad.ctaText,
-        ctaUrl: ad.ctaUrl,
-        budget: ad.budget,
-        spendCap: ad.spendCap,
-        startDate: ad.startDate,
-        endDate: ad.endDate,
-        status: 'active'
-      },
-      create: {
         companyId: company.id,
         categoryId: category.id,
-        imageUrl: ad.imageUrl,
-        headline: ad.headline,
-        ctaText: ad.ctaText,
-        ctaUrl: ad.ctaUrl,
-        budget: ad.budget,
-        spendCap: ad.spendCap,
-        startDate: ad.startDate,
-        endDate: ad.endDate,
-        status: 'active'
       }
     });
     
-    // Generate random impressions for each ad (between 30-100 per ad)
-    const impressionCount = Math.floor(Math.random() * 71) + 30;
-    await generateImpressions(createdAd.id, testUser.id, impressionCount);
-    console.log(`Generated ${impressionCount} impressions for ad: ${createdAd.headline}`);
+    // Create or update the ad
+    const ad = await prisma.ad.upsert({
+      where: {
+        id: existingAd?.id || 'non-existent-id', // Use existing ad ID or a non-existent ID
+      },
+      update: {
+        imageUrl: adData.imageUrl,
+        headline: adData.headline,
+        ctaText: adData.ctaText,
+        ctaUrl: adData.ctaUrl,
+        budget: adData.budget,
+        spendCap: adData.spendCap,
+        startDate: adData.startDate,
+        endDate: adData.endDate,
+      },
+      create: {
+        company: { connect: { id: company.id } },
+        category: { connect: { id: category.id } },
+        imageUrl: adData.imageUrl,
+        headline: adData.headline,
+        ctaText: adData.ctaText,
+        ctaUrl: adData.ctaUrl,
+        budget: adData.budget,
+        spendCap: adData.spendCap,
+        startDate: adData.startDate,
+        endDate: adData.endDate,
+      },
+    });
+    
+    console.log(`Created ad: ${ad.headline} for ${adData.companyName} in ${adData.categorySlug}`);
+    
+    // Generate impressions for this ad
+    await generateImpressions(ad.id, testUser.id, 100);
+    
+    // Update ad metrics
+    const impressions = await prisma.impression.findMany({
+      where: { adId: ad.id },
+    });
+    
+    const clicks = impressions.filter(imp => imp.clicked).length;
+    
+    // Get today's date with time set to midnight for the date field
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    await prisma.adMetrics.upsert({
+      where: { 
+        adId_date: {
+          adId: ad.id,
+          date: today
+        }
+      },
+      update: {
+        impressions: impressions.length,
+        clicks,
+        ctr: impressions.length > 0 ? clicks / impressions.length : 0,
+      },
+      create: {
+        ad: { connect: { id: ad.id } },
+        date: today,
+        impressions: impressions.length,
+        clicks,
+        ctr: impressions.length > 0 ? clicks / impressions.length : 0,
+      },
+    });
+    
+    console.log(`Generated ${impressions.length} impressions with ${clicks} clicks for ad: ${ad.headline}`);
   }
-  
-  console.log('Successfully seeded ads and generated impressions!');
 
-  // Seed default users with password "password"
+  console.log('Successfully seeded ads and generated impressions!');
 
   // Seed default users with password "password"
   const users = [

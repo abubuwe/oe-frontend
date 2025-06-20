@@ -21,12 +21,13 @@ model User {
 }
 
 model Company {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  ads       Ad[]
-  User      User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String     @id @default(uuid())
+  name       String     @unique
+  ads        Ad[]
+  categories Category[] // Add relation to categories
+  User       User[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 enum Role {
@@ -40,9 +41,13 @@ model Category {
   id        String   @id @default(uuid())
   name      String   @unique
   slug      String   @unique
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
   ads       Ad[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  @@unique([companyId, slug]) // Ensure unique categories per company
 }
 
 model Ad {
