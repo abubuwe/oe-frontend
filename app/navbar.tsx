@@ -20,16 +20,13 @@ export function Navbar() {
   const { data: session } = useSession();
   return (
     <FixedAppBar position="static">
-    <Container maxWidth="md">
+    <Container maxWidth="xl">
         <Toolbar disableGutters>
-          <Typography variant="h6" style={{ flexGrow: 1, fontFamily: 'Roboto, sans-serif' }}>
+          <Typography variant="h6" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 700, marginRight: '1.5rem', color: 'white' }}>
             Simple Ask
           </Typography>
           {/* Left-hand links */}
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <Link href="/" style={{ color: "#fff", textDecoration: "none" }}>
-              Home
-            </Link>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Link
               href="/dashboard"
               style={{ color: "#fff", textDecoration: "none" }}
