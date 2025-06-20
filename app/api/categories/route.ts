@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 
-// GET /api/categories - Get categories for a specific company
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -40,7 +39,6 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/categories - Create a new category
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);

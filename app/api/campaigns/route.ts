@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 
-// GET /api/campaigns - Get campaigns for the current user's company
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -70,7 +69,6 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/campaigns - Create a new campaign
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);

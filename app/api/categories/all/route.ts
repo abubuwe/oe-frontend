@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 
-// GET /api/categories/all - Get all categories across companies (super user only)
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);

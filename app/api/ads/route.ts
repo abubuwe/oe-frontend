@@ -125,10 +125,6 @@ async function calculateAdSpend(adId: string): Promise<number> {
   return metrics.reduce((total, metric) => total + Number(metric.spend), 0);
 }
 
-/**
- * POST endpoint for ad serving with advanced selection algorithm
- * This endpoint uses weighted scoring for better ad targeting
- */
 export async function POST(request: Request) {
   try {
     let question = '';
@@ -331,10 +327,6 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * GET endpoint for ad serving with advanced selection algorithm
- * This endpoint uses the same weighted scoring as the POST endpoint
- */
 export async function GET(request: Request) {
   try {
     // This endpoint accepts unauthenticated requests
