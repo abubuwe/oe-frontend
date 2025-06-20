@@ -31,7 +31,7 @@ export function Navbar() {
               href="/analytics"
               style={{ color: "#fff", textDecoration: "none" }}
             >
-              Dashboard
+              Analytics
             </Link>
           </Box>
 

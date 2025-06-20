@@ -7,9 +7,13 @@ import {
   Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, CircularProgress, 
   Card, CardContent, Grid, Chip, Divider,
-  AppBar, Toolbar
+  AppBar, Toolbar, Checkbox
 } from '@mui/material';
 import { styled } from '@mui/system';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, 
+  Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 
 interface ReportRow {
   impressionId: string;
@@ -35,10 +39,13 @@ const StyledButton = styled(Button)(({ theme }) => ({
 export default function AdvertiserDashboard() {
   const { data: session } = useSession();
   const [data, setData] = useState<ReportRow[]>([]);
+  const [dailyData, setDailyData] = useState<{ date: string, impressions: number, clicks: number }[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [chartLoading, setChartLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (session?.user.companyId) {
+      // Fetch impression data
       axios
         .get<ReportRow[]>(`/api/reports?companyId=${session.user.companyId}`)
         .then((res) => setData(res.data))
@@ -52,6 +59,21 @@ export default function AdvertiserDashboard() {
           });
         })
         .finally(() => setLoading(false));
+      
+      // Fetch daily metrics for the chart
+      axios
+        .get(`/api/reports/daily?companyId=${session.user.companyId}`)
+        .then((res) => setDailyData(res.data))
+        .catch((error: any) => {
+          console.error('Error fetching daily metrics:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            endpoint: '/api/reports/daily',
+            companyId: session.user.companyId
+          });
+        })
+        .finally(() => setChartLoading(false));
     }
   }, [session]);
 
@@ -175,6 +197,59 @@ export default function AdvertiserDashboard() {
           </Card>
         </Grid>
       </Grid>
+      
+      {/* Daily Metrics Chart */}
+      <Paper sx={{ width: '100%', p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Daily Impressions and Clicks
+        </Typography>
+        {chartLoading ? (
+          <Box display="flex" justifyContent="center" alignItems="center" height="300px">
+            <CircularProgress />
+          </Box>
+        ) : dailyData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart
+              data={dailyData}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              />
+              <YAxis />
+              <Tooltip 
+                labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                formatter={(value, name) => [value, name === 'impressions' ? 'Impressions' : 'Clicks']}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="impressions" 
+                stroke="#8884d8" 
+                name="Impressions"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="clicks" 
+                stroke="#82ca9d" 
+                name="Clicks"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <Box display="flex" justifyContent="center" alignItems="center" height="300px">
+            <Typography>No daily data available</Typography>
+          </Box>
+        )}
+      </Paper>
 
       {/* Data Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
@@ -182,23 +257,16 @@ export default function AdvertiserDashboard() {
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
-                <StyledTableCell>Impression ID</StyledTableCell>
-                <StyledTableCell>Ad ID</StyledTableCell>
-                <StyledTableCell>Company</StyledTableCell>
                 <StyledTableCell>Category</StyledTableCell>
                 <StyledTableCell>Question</StyledTableCell>
                 <StyledTableCell>Timestamp</StyledTableCell>
-                <StyledTableCell align="right">Views</StyledTableCell>
-                <StyledTableCell align="right">Clicks</StyledTableCell>
+                <StyledTableCell align="center">Clicked</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {data.length > 0 ? (
                 data.map((row) => (
                   <TableRow hover key={row.impressionId}>
-                    <TableCell>{row.impressionId.substring(0, 8)}...</TableCell>
-                    <TableCell>{row.adId.substring(0, 8)}...</TableCell>
-                    <TableCell>{row.company}</TableCell>
                     <TableCell>
                       <Chip label={row.category} size="small" color="primary" variant="outlined" />
                     </TableCell>
@@ -208,13 +276,18 @@ export default function AdvertiserDashboard() {
                         : row.question}
                     </TableCell>
                     <TableCell>{new Date(row.timestamp).toLocaleString()}</TableCell>
-                    <TableCell align="right">{row.views}</TableCell>
-                    <TableCell align="right">{row.clicks}</TableCell>
+                    <TableCell align="center">
+                      <Checkbox 
+                        checked={row.clicks > 0}
+                        disabled={true}
+                        size="small"
+                      />
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={4} align="center">
                     No data available
                   </TableCell>
                 </TableRow>

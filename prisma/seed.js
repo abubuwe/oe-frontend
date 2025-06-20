@@ -15,9 +15,26 @@ async function generateImpressions(adId, userId, count = 50) {
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
-  // Generate random impressions
+  // Create an array of dates for the last 30 days
+  const dates = [];
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    dates.push(date);
+  }
+  
+  // Distribute impressions more evenly across the last month
   for (let i = 0; i < count; i++) {
-    const timestamp = randomDate(thirtyDaysAgo, now);
+    // Select a date from the array (weighted towards more recent dates)
+    const dateIndex = Math.floor(Math.random() * Math.random() * 30);
+    const baseDate = dates[dateIndex];
+    
+    // Add random hours/minutes/seconds to make timestamps more realistic
+    const timestamp = new Date(baseDate);
+    timestamp.setHours(Math.floor(Math.random() * 24));
+    timestamp.setMinutes(Math.floor(Math.random() * 60));
+    timestamp.setSeconds(Math.floor(Math.random() * 60));
+    
     const clicked = Math.random() < 0.3; // 30% chance of click
     
     impressions.push({
