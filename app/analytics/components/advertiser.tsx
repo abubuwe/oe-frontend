@@ -7,13 +7,14 @@ import {
   Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, CircularProgress, 
   Card, CardContent, Grid, Chip, Divider,
-  AppBar, Toolbar, Checkbox
+  AppBar, Toolbar, Checkbox, Tabs, Tab
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
+import AdvertiserCampaigns from './campaign-management/advertiser-campaigns';
 
 interface ReportRow {
   impressionId: string;
@@ -42,6 +43,7 @@ export default function AdvertiserDashboard() {
   const [dailyData, setDailyData] = useState<{ date: string, impressions: number, clicks: number }[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [chartLoading, setChartLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<number>(0);
 
   useEffect(() => {
     if (session?.user.companyId) {
@@ -118,7 +120,11 @@ export default function AdvertiserDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  if (loading && activeTab === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
@@ -128,31 +134,48 @@ export default function AdvertiserDashboard() {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid #ddd', mb: 3 }}>
-        <Toolbar>
-          <Typography variant="h6" color="inherit" sx={{ flexGrow: 1 }}>
-            Advertiser Dashboard
-          </Typography>
-          <Box>
-            <StyledButton 
-              variant="outlined" 
-              color="primary" 
-              onClick={exportCSV} 
-              disabled={!data.length}
-            >
-              Export CSV
-            </StyledButton>
-            <StyledButton 
-              variant="outlined" 
-              color="primary" 
-              onClick={exportJSON} 
-              disabled={!data.length}
-            >
-              Export JSON
-            </StyledButton>
-          </Box>
-        </Toolbar>
-      </AppBar>
+      <Paper sx={{ mb: 3 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Analytics Dashboard" />
+          <Tab label="Campaign Management" />
+        </Tabs>
+      </Paper>
+      
+      {activeTab === 1 ? (
+        <AdvertiserCampaigns />
+      ) : (
+        <>
+          <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid #ddd', mb: 3 }}>
+            <Toolbar>
+              <Typography variant="h6" color="inherit" sx={{ flexGrow: 1 }}>
+                Advertiser Analytics Dashboard
+              </Typography>
+              <Box>
+                <StyledButton 
+                  variant="outlined" 
+                  color="primary" 
+                  onClick={exportCSV} 
+                  disabled={!data.length}
+                >
+                  Export CSV
+                </StyledButton>
+                <StyledButton 
+                  variant="outlined" 
+                  color="primary" 
+                  onClick={exportJSON} 
+                  disabled={!data.length}
+                >
+                  Export JSON
+                </StyledButton>
+              </Box>
+            </Toolbar>
+          </AppBar>
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -296,6 +319,8 @@ export default function AdvertiserDashboard() {
           </Table>
         </TableContainer>
       </Paper>
+        </>
+      )}
     </Container>
   );
 }
