@@ -15,6 +15,7 @@ model User {
   role        Role         @default(doctor)
   companyId   String?
   company     Company?     @relation(fields: [companyId], references: [id])
+  impressions Impression[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -22,6 +23,7 @@ model User {
 model Company {
   id        String   @id @default(uuid())
   name      String   @unique
+  ads       Ad[]
   User      User[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -32,4 +34,79 @@ enum Role {
   advertiser
   staff
   super
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  ads       Ad[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ad {
+  id          String       @id @default(uuid())
+  company     Company      @relation(fields: [companyId], references: [id])
+  companyId   String
+  category    Category     @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  imageUrl    String
+  headline    String
+  ctaText     String
+  ctaUrl      String
+  status      AdStatus     @default(active)
+  budget      Decimal?     @db.Decimal(10, 2)
+  spendCap    Decimal?     @db.Decimal(10, 2)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  impressions Impression[]
+  metrics     AdMetrics[]
+  
+  @@index([status])
+  @@index([categoryId])
+  @@index([companyId])
+}
+
+model Impression {
+  id            String    @id @default(uuid())
+  ad            Ad        @relation(fields: [adId], references: [id])
+  adId          String
+  user          User?     @relation(fields: [userId], references: [id])
+  userId        String?
+  question      String
+  timestamp     DateTime  @default(now())
+  clicked       Boolean   @default(false)
+  sessionId     String?
+  idempotencyKey String?  @unique
+  
+  @@index([adId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([sessionId])
+  @@index([clicked])
+}
+
+
+
+model AdMetrics {
+  id          String   @id @default(uuid())
+  adId        String
+  ad          Ad       @relation(fields: [adId], references: [id])
+  date        DateTime @db.Date
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  ctr         Float    @default(0)
+  spend       Decimal  @default(0) @db.Decimal(10, 2)
+  
+  @@unique([adId, date])
+  @@index([date])
+}
+
+enum AdStatus {
+  active
+  paused
+  archived
 }

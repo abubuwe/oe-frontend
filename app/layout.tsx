@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import './globals.css';
 import { Roboto, Open_Sans } from 'next/font/google';
-import { Navbar } from "./navbar";
+import { Navbar } from "../components/navbar";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import AuthProvider from "./auth-provider";
