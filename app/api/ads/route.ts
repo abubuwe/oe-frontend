@@ -269,6 +269,9 @@ export async function POST(request: Request) {
           sessionId: sessionId || undefined,
         },
       });
+
+      // insert artificial 2s wait
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       return NextResponse.json({
         id: randomAd.id,
