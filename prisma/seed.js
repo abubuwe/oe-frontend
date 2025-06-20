@@ -1,6 +1,72 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, AdStatus } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { faker } = require('@faker-js/faker');
 const prisma = new PrismaClient();
+
+// Function to generate a random date within a range
+function randomDate(start, end) {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+}
+
+// Function to generate random impressions for an ad
+async function generateImpressions(adId, userId, count = 50) {
+  const impressions = [];
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // Generate random impressions
+  for (let i = 0; i < count; i++) {
+    const timestamp = randomDate(thirtyDaysAgo, now);
+    const clicked = Math.random() < 0.3; // 30% chance of click
+    
+    impressions.push({
+      adId,
+      userId: Math.random() < 0.8 ? userId : null, // 80% chance to have a user
+      question: faker.lorem.sentence(),
+      timestamp,
+      clicked,
+      sessionId: faker.string.uuid(),
+      idempotencyKey: faker.string.uuid()
+    });
+  }
+  
+  // Create impressions in batch
+  await prisma.impression.createMany({
+    data: impressions,
+    skipDuplicates: true
+  });
+  
+  // Create/update metrics by day
+  const metrics = {};
+  impressions.forEach(imp => {
+    const date = imp.timestamp.toISOString().split('T')[0];
+    if (!metrics[date]) {
+      metrics[date] = { impressions: 0, clicks: 0 };
+    }
+    metrics[date].impressions++;
+    if (imp.clicked) metrics[date].clicks++;
+  });
+  
+  // Update metrics
+  for (const [date, data] of Object.entries(metrics)) {
+    await prisma.adMetrics.upsert({
+      where: { adId_date: { adId, date: new Date(date) } },
+      update: {
+        impressions: { increment: data.impressions },
+        clicks: { increment: data.clicks }
+      },
+      create: {
+        adId,
+        date: new Date(date),
+        impressions: data.impressions,
+        clicks: data.clicks
+      }
+    });
+  }
+  
+  return impressions.length;
+}
 
 async function main() {
   // Seed categories
@@ -40,8 +106,24 @@ async function main() {
   }
 
   console.log('Seeded categories and companies.');
+  
+  // Create a test user for impressions
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@example.com' },
+    update: {},
+    create: {
+      email: 'test@example.com',
+      name: 'Test User',
+      password: await bcrypt.hash('password123', 10),
+      role: 'doctor',
+      companyId: companyMap['Pfizer'].id
+    }
+  });
+  
+  console.log('Created test user:', testUser.email);
 
     // Seed ads for each company and category combination
+  console.log('Seeding ads and generating impressions...');
     const ads = [
       // Pfizer ads
       {
@@ -244,60 +326,63 @@ async function main() {
       }
     ];
   
-    for (const ad of ads) {
-      const company = companyMap[ad.companyName];
-      const category = categoryMap[ad.categorySlug];
-      
-      // Skip if category doesn't exist (like 'diabetes' which isn't in our categories)
-      if (!category) continue;
-      
-      // Find existing ad for this company and category combination
-      const existingAd = await prisma.ad.findFirst({
-        where: {
-          companyId: company.id,
-          categoryId: category.id,
-        }
-      });
-      
-      if (existingAd) {
-        // Update existing ad
-        await prisma.ad.update({
+  // Seed ads and generate impressions
+  for (const ad of ads) {
+    const company = companyMap[ad.companyName];
+    const category = categoryMap[ad.categorySlug];
+    
+    // Skip if category doesn't exist
+    if (!category) continue;
+    
+    // Create or update ad
+    const createdAd = await prisma.ad.upsert({
+      where: {
+        // Use a unique identifier for the ad, since we don't have a unique constraint on companyId + categoryId
+        // We'll use the combination of company name and category slug to find existing ads
+        id: (await prisma.ad.findFirst({
           where: {
-            id: existingAd.id,
-          },
-          data: {
-            imageUrl: ad.imageUrl,
-            headline: ad.headline,
-            ctaText: ad.ctaText,
-            ctaUrl: ad.ctaUrl,
-            status: 'active',
-            budget: ad.budget,
-            spendCap: ad.spendCap,
-            startDate: ad.startDate,
-            endDate: ad.endDate,
-          },
-        });
-      } else {
-        // Create new ad with auto-generated UUID
-        await prisma.ad.create({
-          data: {
             companyId: company.id,
             categoryId: category.id,
-            imageUrl: ad.imageUrl,
-            headline: ad.headline,
-            ctaText: ad.ctaText,
-            ctaUrl: ad.ctaUrl,
-            status: 'active',
-            budget: ad.budget,
-            spendCap: ad.spendCap,
-            startDate: ad.startDate,
-            endDate: ad.endDate,
+            headline: ad.headline
           },
-        });
+          select: { id: true }
+        }))?.id || '00000000-0000-0000-0000-000000000000' // Fallback ID that won't match anything
+      },
+      update: {
+        imageUrl: ad.imageUrl,
+        headline: ad.headline,
+        ctaText: ad.ctaText,
+        ctaUrl: ad.ctaUrl,
+        budget: ad.budget,
+        spendCap: ad.spendCap,
+        startDate: ad.startDate,
+        endDate: ad.endDate,
+        status: 'active'
+      },
+      create: {
+        companyId: company.id,
+        categoryId: category.id,
+        imageUrl: ad.imageUrl,
+        headline: ad.headline,
+        ctaText: ad.ctaText,
+        ctaUrl: ad.ctaUrl,
+        budget: ad.budget,
+        spendCap: ad.spendCap,
+        startDate: ad.startDate,
+        endDate: ad.endDate,
+        status: 'active'
       }
-    }
+    });
     
-    console.log('Seeded ads for companies and categories.');
+    // Generate random impressions for each ad (between 30-100 per ad)
+    const impressionCount = Math.floor(Math.random() * 71) + 30;
+    await generateImpressions(createdAd.id, testUser.id, impressionCount);
+    console.log(`Generated ${impressionCount} impressions for ad: ${createdAd.headline}`);
+  }
+  
+  console.log('Successfully seeded ads and generated impressions!');
+
+  // Seed default users with password "password"
 
   // Seed default users with password "password"
   const users = [

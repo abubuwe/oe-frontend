@@ -21,9 +21,11 @@
     "openai": "^4.55.7",
     "prisma": "^6.10.1",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "recharts": "^2.15.3"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.8.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

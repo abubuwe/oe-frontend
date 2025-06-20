@@ -28,7 +28,7 @@ export function Navbar() {
           {/* Left-hand links */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Link
-              href="/dashboard"
+              href="/analytics"
               style={{ color: "#fff", textDecoration: "none" }}
             >
               Dashboard
